@@ -1,67 +1,73 @@
+import re
+import json
+import argparse
 from scapy.all import rdpcap
 from rich.console import Console
-from utils.parsers import extract_payloads, search_patterns
-import argparse
-import json
-import sys
+from rich.table import Table
 
 console = Console()
 
-# Predefined pattern dictionary
-predefined_patterns = {
+# Default patterns
+PATTERNS = {
     "flag": r"flag{.*?}",
-    "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}",
-    "jwt": r"eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}",
+    "email": r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
+    "jwt": r"eyJ[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+",
+    "http_creds": r"(uname|username)=([^&\s]+)|(pass|password)=([^&\s]+)"
 }
+    
+def extract_payloads(packets):
+    payloads = []
+    for i, pkt in enumerate(packets, start=1):
+        if pkt.haslayer("Raw"):
+            payload = bytes(pkt["Raw"].load).decode(errors="ignore")
+            payloads.append((i, payload))  # Use i as packet number
+    return payloads
 
-def display_matches(matches):
-    for index, payload, found in matches:
-        for match in found:
-            console.print(f"[green]Packet #{index}[/green]: [yellow]{match}[/yellow]")
 
-def save_results(matches, output_file="results.json"):
-    output = []
-    for index, payload, found in matches:
-        for match in found:
-            output.append({"packet": index, "match": match})
-    with open(output_file, "w") as f:
-        json.dump(output, f, indent=4)
-    console.print(f"[bold cyan]Results saved to {output_file}[/bold cyan]")
+def search_patterns(payloads):
+    matches = []
+    for pkt_num, payload in payloads:
+        for label, pattern in PATTERNS.items():
+            for match in re.findall(pattern, payload):
+                if isinstance(match, tuple):
+                    # Flatten grouped matches
+                    flattened = ["=".join([g1, g2]) for g1, g2 in zip(match[::2], match[1::2]) if g1 and g2]
+                    for kv in flattened:
+                        matches.append({"packet": pkt_num, "match": kv})
+                else:
+                    matches.append({"packet": pkt_num, "match": match})
+    return matches
+
+def save_results(results):
+    with open("results.json", "w") as f:
+        json.dump(results, f, indent=4)
+
+def display_results(results):
+    if not results:
+        console.print("[red]No matches found.[/red]")
+        return
+
+    table = Table(show_header=True, header_style="bold cyan")
+    table.add_column("Packet #")
+    table.add_column("Match")
+
+    for result in results:
+        table.add_row(str(result["packet"]), result["match"])
+    console.print(table)
 
 def main():
-    parser = argparse.ArgumentParser(description="FlagSniff - Extract flags & secrets from .pcap files")
-    parser.add_argument("-f", "--file", help="Path to .pcap file", required=True)
-    parser.add_argument("--regex", help="Custom regex pattern to search (overrides --patterns)", default=None)
-    parser.add_argument("--patterns", nargs="+", choices=list(predefined_patterns.keys()),
-                        help="One or more predefined patterns to search (e.g., flag email jwt)")
-
-    # Show help if no arguments are passed
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-
+    parser = argparse.ArgumentParser(description="FlagSniff - Extract secrets from .pcap files")
+    parser.add_argument("-f", "--file", required=True, help="Path to .pcap file")
     args = parser.parse_args()
+
     packets = rdpcap(args.file)
     payloads = extract_payloads(packets)
+    results = search_patterns(payloads)
 
-    # Determine which patterns to apply
-    if args.regex:
-        matches = search_patterns(payloads, args.regex)
-    elif args.patterns:
-        matches = []
-        for pattern_name in args.patterns:
-            regex = predefined_patterns[pattern_name]
-            found = search_patterns(payloads, regex)
-            matches.extend(found)
-    else:
-        # Default to flag pattern
-        matches = search_patterns(payloads, predefined_patterns["flag"])
-
-    if matches:
-        display_matches(matches)
-        save_results(matches)
-    else:
-        console.print("[bold red]No matches found.[/bold red]")
+    display_results(results)
+    save_results(results)
+    if results:
+        console.print("[green]Results saved to results.json[/green]")
 
 if __name__ == "__main__":
     main()
