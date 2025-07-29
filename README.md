@@ -2,7 +2,7 @@
 
 **FlagSniff** is a command-line tool designed for red teamers, penetration testers, and cybersecurity learners. It parses `.pcap` / `.pcapng` network capture files and extracts sensitive data such as flags, emails, JWT tokens, and other secrets using customizable regex patterns.
 
-![FlagSniff CLI](https://raw.githubusercontent.com/your-username/FlagSniff/main/assets/demo.gif)
+![FlagSniff CLI](Images/logo.png)
 
 ---
 
