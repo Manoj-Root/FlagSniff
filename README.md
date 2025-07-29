@@ -50,12 +50,13 @@ pip install -r requirements.txt
 
 🚀 Usage
 Basic usage
+python flagsniff.py --h
 
+
+python flagsniff.py -f path/to/file.pcapng --auto
 python flagsniff.py -f path/to/file.pcapng
+python flagsniff.py -f path/to/file.pcapng --regex "flag{.*?}"
 
-Custom regex search
-
-python flagsniff.py -f path/to/file.pcapng --regex "password=.*"
 
 🧪 Sample Output
 
