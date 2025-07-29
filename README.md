@@ -5,7 +5,7 @@
 ## 🚀 Features
 
 ### ✅ Core Features (v1.0)
-- **📁 PCAP File Analysis**: Load and parse `.pcap` files using Scapy
+- **📁 PCAP & PCAPNG File Analysis**: Load and parse `.pcap or .pcapng` files using Scapy
 - **🔍 Multi-Protocol Support**: HTTP, DNS, FTP, Telnet, TCP, UDP
 - **🚩 Flag Detection**: Automatically find CTF flags with patterns like `flag{}`, `CTF{}`, `HTB{}`
 - **🔐 Credential Extraction**: Detect Basic Auth, form-based logins, passwords
