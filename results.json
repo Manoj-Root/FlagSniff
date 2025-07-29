@@ -1,6 +1,0 @@
-[
-    {
-        "packet": 3,
-        "match": "flag{MissingTransportLayerSecurity}"
-    }
-]
